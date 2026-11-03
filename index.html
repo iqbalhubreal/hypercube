@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧊 Hypercube Studio</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <header>
+      <h1>🧊 Hypercube Studio</h1>
+      <p>Rotate 4D shapes and watch their 3D shadows</p>
+    </header>
+
+    <!-- SHAPE -->
+    <details open>
+      <summary>Shape</summary>
+      <div class="body">
+        <div class="grid2">
+          <button class="opt active" data-shape="tesseract"><span class="ic">▣</span>Hypercube</button>
+          <button class="opt" data-shape="cell5"><span class="ic">△</span>5-cell</button>
+          <button class="opt" data-shape="cell16"><span class="ic">◇</span>16-cell</button>
+          <button class="opt" data-shape="cell24"><span class="ic">✦</span>24-cell</button>
+        </div>
+        <p class="desc" id="shapeDesc"></p>
+      </div>
+    </details>
+
+    <!-- ACTIONS -->
+    <details open>
+      <summary>Actions</summary>
+      <div class="body">
+        <div class="grid2">
+          <button class="btn primary" id="btnPause">⏸ Pause</button>
+          <button class="btn" id="btnReset">↺ Reset view</button>
+          <button class="btn" id="btnRandom">🎲 Random spin</button>
+          <button class="btn" id="btnStop">⏹ Stop spin</button>
+        </div>
+        <label class="check"><input type="checkbox" id="autoOrbit"> Slowly orbit the camera</label>
+        <label class="check"><input type="checkbox" id="drag4d"> Dragging rotates in 4D (touch screens)</label>
+      </div>
+    </details>
+
+    <!-- ROTATION -->
+    <details open>
+      <summary>Rotation</summary>
+      <div class="body">
+        <div class="grid4">
+          <button class="btn small" data-preset="inside">Inside-out</button>
+          <button class="btn small" data-preset="double">Double</button>
+          <button class="btn small" data-preset="tumble">Tumble</button>
+          <button class="btn small" data-preset="still">Still</button>
+        </div>
+        <div class="group-label">4D directions <span class="tag">turns it inside out</span></div>
+        <div id="planes4"></div>
+        <div class="group-label">Normal 3D directions</div>
+        <div id="planes3"></div>
+        <div class="group-label">Overall</div>
+        <div class="row"><label>Speed</label><input type="range" id="master" min="0" max="3" step="0.05"><output id="masterOut"></output></div>
+        <p class="desc" style="margin-top:4px">Tip: double-click a slider to set it to 0.</p>
+      </div>
+    </details>
+
+    <!-- SETTINGS -->
+    <details open>
+      <summary>Settings</summary>
+      <div class="body">
+        <div class="field">
+          <span>Look</span>
+          <div class="seg" id="styleSeg">
+            <button data-style="wire" class="active">🕸 Wireframe</button>
+            <button data-style="glass">💎 Glass</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>Colors</span>
+          <select id="colorMode">
+            <option value="depth">4D depth (inner ↔ outer)</option>
+            <option value="rainbow">Rainbow</option>
+            <option value="mono">Ice white</option>
+          </select>
+        </div>
+        <div class="row"><label>Perspective</label><input type="range" id="persp" min="0" max="1" step="0.01"><output id="perspOut"></output></div>
+        <div class="row"><label>Lines</label><input type="range" id="thick" min="0.5" max="6" step="0.1"><output id="thickOut"></output></div>
+        <div class="row"><label>Zoom</label><input type="range" id="zoom" min="0.3" max="3" step="0.01"><output id="zoomOut"></output></div>
+        <label class="check"><input type="checkbox" id="showVerts" checked> Show corners</label>
+        <label class="check"><input type="checkbox" id="glow" checked> Neon glow</label>
+        <label class="check"><input type="checkbox" id="fog" checked> Fade far edges</label>
+        <div class="group-label">3D glasses</div>
+        <label class="check"><input type="checkbox" id="anaglyph"> 🕶 Red/cyan mode</label>
+        <div class="row hidden" id="eyeRow"><label>Depth</label><input type="range" id="eyeSep" min="0" max="1" step="0.01"><output id="eyeSepOut"></output></div>
+      </div>
+    </details>
+
+    <!-- RECORDING -->
+    <details>
+      <summary>Recording</summary>
+      <div class="body">
+        <div class="grid2">
+          <button class="btn" id="btnShot">📷 Screenshot</button>
+          <button class="btn rec" id="btnRec">⏺ Record</button>
+        </div>
+        <div class="status" id="recStatus">Saves a PNG image or a WebM video of the view.</div>
+        <div class="group-label">Keyboard shortcuts</div>
+        <div class="keys">
+          <span class="kbd">Space</span> pause &nbsp; <span class="kbd">R</span> reset &nbsp; <span class="kbd">1–4</span> shapes<br>
+          <span class="kbd">W</span> wireframe/glass &nbsp; <span class="kbd">G</span> 3D glasses<br>
+          <span class="kbd">P</span> screenshot &nbsp; <span class="kbd">V</span> record &nbsp; <span class="kbd">Shift</span>+drag 4D spin
+        </div>
+      </div>
+    </details>
+  </aside>
+
+  <main>
+    <canvas id="cv"></canvas>
+    <button id="menuBtn" aria-label="Menu">☰</button>
+    <div class="hud tl">
+      <div id="hudName"></div>
+      <div id="hudStats"></div>
+      <div class="legend" id="legend"><span>far in 4D</span><div class="bar"></div><span>near in 4D</span></div>
+    </div>
+    <div class="hud tr">
+      <span class="pill hidden" id="anaBadge">🕶 red/cyan</span>
+      <span class="pill rec hidden" id="recBadge">● REC 00:00</span>
+      <span class="pill" id="fps">-- fps</span>
+    </div>
+    <div class="hud bottom">Drag to orbit · Shift+drag to spin in 4D · Scroll to zoom · Space to pause</div>
+    <div id="toast"></div>
+  </main>
+</div>
+
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>
