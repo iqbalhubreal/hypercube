@@ -12,10 +12,44 @@
     shape:'tesseract', speeds:{...DEFAULT_SPEEDS}, master:1,
     style:'wire', color:'depth', persp:0.6, thick:2, zoom:1,
     showVerts:true, glow:true, fog:true, anaglyph:false, eyeSep:0.4,
-    autoOrbit:false, drag4d:false, paused:false
+    autoOrbit:false, drag4d:false, paused:false, nature:true
   };
   const view = {yaw:0.55, pitch:0.35};
   let M = identity();
+
+  /* ================= ASMR nature audio ================= */
+  let audio = null, natureBed = null;
+  function ensureAudio(){
+    try{
+      if(!audio){
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        audio = new Ctx();
+        audio.master = audio.createGain(); audio.master.gain.value = +$('natureVol').value / 100;
+        audio.master.connect(audio.destination);
+      }
+      if(audio.state === 'suspended') audio.resume();
+      if(state.nature) startNature();
+    }catch(e){ /* audio is optional */ }
+  }
+  function startNature(){
+    if(!audio || natureBed) return;
+    const src = audio.createBufferSource(), buf = audio.createBuffer(1, audio.sampleRate*2, audio.sampleRate);
+    const data = buf.getChannelData(0); for(let i=0;i<data.length;i++) data[i] = Math.random()*2-1;
+    src.buffer = buf; src.loop = true;
+    const filter = audio.createBiquadFilter(), gain = audio.createGain();
+    filter.type = 'bandpass'; filter.frequency.value = 1250; filter.Q.value = 0.65;
+    gain.gain.value = 0.014; src.connect(filter); filter.connect(gain); gain.connect(audio.master); src.start();
+    natureBed = {src};
+  }
+  function stopNature(){ if(natureBed){ natureBed.src.stop(); natureBed = null; } }
+  function playNatureChime(){
+    if(!state.nature || !audio || audio.state !== 'running') return;
+    const now = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(520 + Math.random()*180, now);
+    o.frequency.exponentialRampToValueAtTime(260, now+0.22);
+    g.gain.setValueAtTime(0.0001,now); g.gain.exponentialRampToValueAtTime(0.035,now+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,now+0.25); o.connect(g); g.connect(audio.master); o.start(now); o.stop(now+0.28);
+  }
 
   /* ================= Shapes ================= */
   const SHAPES = {
@@ -252,7 +286,7 @@
   }
 
   function setShape(k){
-    state.shape = k; shape = build(k);
+    state.shape = k; shape = build(k); playNatureChime();
     document.querySelectorAll('[data-shape]').forEach(b => b.classList.toggle('active', b.dataset.shape === k));
     const S = SHAPES[k];
     $('shapeDesc').textContent = S.desc;
@@ -302,6 +336,8 @@
   bindCheck('autoOrbit','autoOrbit');
   bindCheck('drag4d','drag4d');
   bindCheck('anaglyph','anaglyph', syncAnaglyph);
+  bindCheck('nature','nature', () => state.nature ? (ensureAudio(), startNature()) : stopNature());
+  $('natureVol').addEventListener('input', e => { if(audio) audio.master.gain.value = +e.target.value / 100; });
   function syncAnaglyph(){
     $('anaglyph').checked = state.anaglyph;
     $('eyeRow').classList.toggle('hidden', !state.anaglyph);
@@ -356,6 +392,7 @@
   document.addEventListener('pointerup', e => {
     if(e.target.closest('button')) setTimeout(() => document.activeElement && document.activeElement.blur(), 0);
   });
+  document.addEventListener('pointerdown', ensureAudio);
 
   /* ================= Pointer controls ================= */
   const drag = {active:false, x:0, y:0};
