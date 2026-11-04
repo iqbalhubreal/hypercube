@@ -18,7 +18,7 @@
   let M = identity();
 
   /* ================= ASMR nature audio ================= */
-  let audio = null, natureBed = null;
+  let audio = null, natureBed = null, recDest = null;
   function ensureAudio(){
     try{
       if(!audio){
@@ -439,6 +439,11 @@
     const types = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
     const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
     const stream = cv.captureStream(60);
+    ensureAudio();
+    if(audio){
+      if(!recDest){ recDest = audio.createMediaStreamDestination(); audio.master.connect(recDest); }
+      recDest.stream.getAudioTracks().forEach(track => stream.addTrack(track));
+    }
     const r = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:8e6} : {});
     rec.chunks = [];
     r.ondataavailable = e => { if(e.data && e.data.size) rec.chunks.push(e.data); };
@@ -452,7 +457,7 @@
       rec.recorder = null;
       $('btnRec').textContent = '⏺ Record'; $('btnRec').classList.remove('on');
       $('recBadge').classList.add('hidden');
-      $('recStatus').textContent = `Saved ${(blob.size/1048576).toFixed(1)} MB video.`;
+      $('recStatus').textContent = `Saved ${(blob.size/1048576).toFixed(1)} MB video with audio.`;
       stream.getTracks().forEach(t => t.stop());
     };
     r.start(250);
