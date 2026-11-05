@@ -396,12 +396,25 @@
 
   /* ================= Pointer controls ================= */
   const drag = {active:false, x:0, y:0};
+  const pointers = new Map();
+  let pinchStart = 0, pinchZoom = state.zoom;
+  const pointerDistance = () => {
+    const p = [...pointers.values()];
+    return p.length < 2 ? 0 : Math.hypot(p[0].clientX-p[1].clientX, p[0].clientY-p[1].clientY);
+  };
   cv.addEventListener('pointerdown', e => {
+    pointers.set(e.pointerId, e);
+    if (pointers.size === 2){ pinchStart = pointerDistance(); pinchZoom = state.zoom; drag.active = false; e.preventDefault(); return; }
     drag.active = true; drag.x = e.clientX; drag.y = e.clientY;
     cv.setPointerCapture(e.pointerId); cv.classList.add('drag');
     $('sidebar').classList.remove('open');
   });
   cv.addEventListener('pointermove', e => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, e);
+    if (pointers.size >= 2 && pinchStart){
+      state.zoom = Math.max(0.35, Math.min(3.5, pinchZoom * pointerDistance() / pinchStart));
+      e.preventDefault(); return;
+    }
     if(!drag.active) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX; drag.y = e.clientY;
@@ -413,7 +426,11 @@
       view.pitch = Math.max(-1.5, Math.min(1.5, view.pitch + dy*0.01));
     }
   });
-  const endDrag = () => { drag.active = false; cv.classList.remove('drag'); };
+  const endDrag = e => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchStart = 0;
+    drag.active = false; cv.classList.remove('drag');
+  };
   cv.addEventListener('pointerup', endDrag);
   cv.addEventListener('pointercancel', endDrag);
   cv.addEventListener('wheel', e => {
